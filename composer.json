@@ -3,9 +3,9 @@
     "type": "roundcube-plugin",
     "description": "Plugin to restrict login for users by IPs.",
     "keywords": ["login","restriction"],
-    "homepage": "https://github.com/san4op/login_restriction",
+    "homepage": "https://github.com/san4op/roundcube_login_restriction",
     "license": "GPL-3.0+",
-    "version": "1.0",
+    "version": "1.1",
     "authors": [
         {
             "name": "Alexander Pushkin",

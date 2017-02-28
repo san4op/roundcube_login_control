@@ -3,7 +3,8 @@
 ## Example configuration file
 ##
 
-$config['login_restriction'] = array(
+$config['login_restriction_mode'] = 'whitelist';
+$config['login_restriction_list'] = array(
 	'user1@domain.com' => array(
 		'192.0.2.74',
 		'192.0.2.212',
@@ -15,4 +16,5 @@ $config['login_restriction'] = array(
 		'198.51.100.12/30',
 	),
 );
+
 ?>

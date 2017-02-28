@@ -8,7 +8,8 @@ Configuration Options
 
 Set the following options directly in Roundcube's config file (example):
 ```php
-$config['login_restriction'] = array(
+$config['login_restriction_mode'] = 'whitelist';
+$config['login_restriction_list'] = array(
 	'user1@domain.com' => array(
 		'192.0.2.74',
 		'192.0.2.212',

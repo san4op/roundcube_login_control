@@ -4,22 +4,30 @@
  *
  * Plugin to restrict login for users by IPs.
  *
- * @date 2016-12-30
- * @version 1.0
+ * @date 2017-02-28
+ * @version 1.1
  * @author Alexander Pushkin
- * @url https://github.com/san4op/login_restriction
+ * @url https://github.com/san4op/roundcube_login_restriction
  * @licence GNU GPLv3
  */
+
+define('IPADDR_REGEXP', '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-2]?[0-9]|3[0-2]))?$');
 
 class login_restriction extends rcube_plugin
 {
 	private $rcmail;
-	private $restrictions = array();
+	private $mode = 'whitelist';
+	private $list = array();
 
 	function init()
 	{
 		$this->rcmail = rcube::get_instance();
-		$this->restrictions = $this->rcmail->config->get('login_restriction', array());
+		$this->mode = $this->rcmail->config->get('login_restriction_mode', 'whitelist');
+		$this->list = $this->rcmail->config->get('login_restriction_list', array());
+
+		if ($this->mode != 'whitelist' && $this->mode != 'blacklist') {
+			$this->mode = 'whitelist';
+		}
 
 		$this->add_texts('localization/', true);
 
@@ -76,28 +84,31 @@ class login_restriction extends rcube_plugin
 			return true;
 		}
 
-		if (isset($this->restrictions[$username]) && !empty($this->restrictions[$username])) {
-			define('IPADDR_REGEXP', '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-2]?[0-9]|3[0-2]))?$');
-
+		if (isset($this->list[$username]) && !empty($this->list[$username])) {
 			$found = false;
 			$user_ip = rcube_utils::remote_addr();
-			$user_restrictions =& $this->restrictions[$username];
+			$user_list =& $this->list[$username];
 
-			if (is_string($this->restrictions[$username])) {
-				if (preg_match('/'.IPADDR_REGEXP.'/', $this->restrictions[$username]) && $this->ip_in_range($user_ip, $this->restrictions[$username])) {
+			if (is_string($user_list)) {
+				if (preg_match('/'.IPADDR_REGEXP.'/', $user_list) && $this->ip_in_range($user_ip, $user_list)) {
 					$found = true;
 				}
 			}
-			elseif (is_array($this->restrictions[$username])) {
-				for ($i=0,$a=count($user_restrictions); $i<$a; $i++) {
-					if (preg_match('/'.IPADDR_REGEXP.'/', $user_restrictions[$i]) && $this->ip_in_range($user_ip, $user_restrictions[$i])) {
+			elseif (is_array($user_list)) {
+				for ($i=0,$a=count($user_list); $i<$a; $i++) {
+					if (preg_match('/'.IPADDR_REGEXP.'/', $user_list[$i]) && $this->ip_in_range($user_ip, $user_list[$i])) {
 						$found = true;
 						break;
 					}
 				}
 			}
 
-			return $found;
+			if ($this->mode == 'whitelist') {
+				return $found;
+			}
+			elseif ($this->mode == 'blacklist') {
+				return !$found;
+			}
 		}
 
 		return true;

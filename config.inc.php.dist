@@ -1,0 +1,13 @@
+<?php
+##
+## Login Restriction configuration file
+##
+
+// List mode: 'whitelist' or 'blacklist'
+$config['login_restriction_mode'] = 'whitelist';
+
+// List of IP addresses
+// Format: array(username => array(IPs, NETWORKs, ...), ...)
+$config['login_restriction_list'] = array();
+
+?>
