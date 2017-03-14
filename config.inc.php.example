@@ -1,10 +1,10 @@
 <?php
 ##
-## Example configuration file
+## Login Control example configuration file
 ##
 
-$config['login_restriction_mode'] = 'whitelist';
-$config['login_restriction_list'] = array(
+$config['login_control_mode'] = 'whitelist';
+$config['login_control_list'] = array(
 	'user1@domain.com' => array(
 		'192.0.2.74',
 		'192.0.2.212',

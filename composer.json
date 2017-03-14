@@ -1,9 +1,9 @@
 {
-    "name": "san4op/login_restriction",
+    "name": "san4op/login_control",
     "type": "roundcube-plugin",
-    "description": "Plugin to restrict login for users by IPs.",
-    "keywords": ["login","restriction"],
-    "homepage": "https://github.com/san4op/roundcube_login_restriction",
+    "description": "Plugin to add whitelist and blacklist for login.",
+    "keywords": ["login", "control", "restriction", "whitelist", "blacklist"],
+    "homepage": "https://github.com/san4op/roundcube_login_control",
     "license": "GPL-3.0+",
     "version": "1.1",
     "authors": [

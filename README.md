@@ -1,15 +1,15 @@
-Login Restriction (Roundcube Webmail Plugin)
+Login Control (Roundcube Webmail Plugin)
 ==========
 
-Plugin to restrict login for users by IPs.
+Plugin to add whitelist and blacklist for login.
 
 Configuration Options
 ---------------------
 
 Set the following options directly in Roundcube's config file (example):
 ```php
-$config['login_restriction_mode'] = 'whitelist';
-$config['login_restriction_list'] = array(
+$config['login_control_mode'] = 'whitelist';
+$config['login_control_list'] = array(
 	'user1@domain.com' => array(
 		'192.0.2.74',
 		'192.0.2.212',
@@ -26,4 +26,4 @@ $config['login_restriction_list'] = array(
 Translation
 -----------
 
-https://www.transifex.com/san4op/roundcube-login-restriction-plugin/
+https://www.transifex.com/san4op/roundcube-login-control-plugin/

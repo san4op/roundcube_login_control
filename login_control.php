@@ -1,19 +1,19 @@
 <?php
 /**
- * Login Restriction
+ * Login Control
  *
- * Plugin to restrict login for users by IPs.
+ * Plugin to add whitelist and blacklist for login.
  *
  * @date 2017-02-28
  * @version 1.1
  * @author Alexander Pushkin
- * @url https://github.com/san4op/roundcube_login_restriction
+ * @url https://github.com/san4op/roundcube_login_control
  * @licence GNU GPLv3
  */
 
 define('IPADDR_REGEXP', '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-2]?[0-9]|3[0-2]))?$');
 
-class login_restriction extends rcube_plugin
+class login_control extends rcube_plugin
 {
 	private $rcmail;
 	private $mode = 'whitelist';
@@ -22,8 +22,8 @@ class login_restriction extends rcube_plugin
 	function init()
 	{
 		$this->rcmail = rcube::get_instance();
-		$this->mode = $this->rcmail->config->get('login_restriction_mode', 'whitelist');
-		$this->list = $this->rcmail->config->get('login_restriction_list', array());
+		$this->mode = $this->rcmail->config->get('login_control_mode', 'whitelist');
+		$this->list = $this->rcmail->config->get('login_control_list', array());
 
 		if ($this->mode != 'whitelist' && $this->mode != 'blacklist') {
 			$this->mode = 'whitelist';
@@ -42,7 +42,7 @@ class login_restriction extends rcube_plugin
 		}
 
 		if (!preg_match('/^(login|logout)$/i', $this->rcmail->task)) {
-			$this->include_script('login_restriction.min.js');
+			$this->include_script('login_control.min.js');
 		}
 	}
 
@@ -52,7 +52,7 @@ class login_restriction extends rcube_plugin
 
 		if (!empty($username) && !$this->check($username)) {
 			$this->rcmail->session->write('access_restricted', '1');
-			$this->rcmail->write_log('userlogins', sprintf("Login Restriction: access denied for %s from %s.", $username, rcube_utils::remote_addr()));
+			$this->rcmail->write_log('userlogins', sprintf("Login Control: access denied for %s from %s.", $username, rcube_utils::remote_addr()));
 			$this->rcmail->output->command('plugin.access_restricted');
 		}
 	}
@@ -60,7 +60,7 @@ class login_restriction extends rcube_plugin
 	function authenticate($args)
 	{
 		if (!$this->check($args['user'])) {
-			$this->rcmail->write_log('userlogins', sprintf("Login Restriction: access denied for %s from %s.", $args['user'], rcube_utils::remote_addr()));
+			$this->rcmail->write_log('userlogins', sprintf("Login Control: access denied for %s from %s.", $args['user'], rcube_utils::remote_addr()));
 			$args['abort'] = true;
 			$args['error'] = $this->gettext('access_restricted');
 		}
