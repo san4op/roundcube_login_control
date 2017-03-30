@@ -1,6 +1,10 @@
 CHANGELOG
 =========
 
+RELEASE 1.2
+-----------
+* Rename plugin
+
 RELEASE 1.1
 -----------
 * Added blacklist mode
