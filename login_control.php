@@ -4,8 +4,8 @@
  *
  * Plugin to add whitelist and blacklist for login.
  *
- * @date 2017-02-28
- * @version 1.1
+ * @date 2017-04-03
+ * @version 1.2
  * @author Alexander Pushkin
  * @url https://github.com/san4op/roundcube_login_control
  * @licence GNU GPLv3
