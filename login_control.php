@@ -1,114 +1,158 @@
 <?php
 /**
- * Login Control
- *
+ * Roundcube Plugin Login Control
  * Plugin to add whitelist and blacklist for login.
  *
- * @date 2017-04-03
- * @version 1.2
+ * @version 1.3
  * @author Alexander Pushkin
- * @url https://github.com/san4op/roundcube_login_control
- * @licence GNU GPLv3
+ * @copyright Copyright (c) 2017, Alexander Pushkin
+ * @link https://github.com/san4op/roundcube_login_control
+ * @license GNU General Public License, version 3
  */
 
 define('IPADDR_REGEXP', '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-2]?[0-9]|3[0-2]))?$');
 
 class login_control extends rcube_plugin
 {
-	private $rcmail;
+	private $rc;
 	private $mode = 'whitelist';
 	private $list = array();
+	private $username;
+	private $ipaddr;
 
-	function init()
+	public function init()
 	{
-		$this->rcmail = rcube::get_instance();
-		$this->mode = $this->rcmail->config->get('login_control_mode', 'whitelist');
-		$this->list = $this->rcmail->config->get('login_control_list', array());
+		$this->rc = rcube::get_instance();
+		$this->username = $this->rc->user->get_username();
+		$this->ipaddr = rcube_utils::remote_addr();
+
+		// load config
+		$this->load_config();
+		$this->mode = $this->rc->config->get('login_control_mode', 'whitelist');
+		$this->list = $this->rc->config->get('login_control_list', array());
 
 		if ($this->mode != 'whitelist' && $this->mode != 'blacklist') {
 			$this->mode = 'whitelist';
 		}
 
-		$this->add_texts('localization/', true);
+		// load localization
+		$this->add_texts('localization/');
 
-		$this->add_hook('refresh', array($this, 'refresh'));
-
-		if ($this->rcmail->task == 'login') {
-			$this->add_hook('authenticate', array($this, 'authenticate'));
+		// include scripts
+		if ($this->rc->task != 'login' && $this->rc->task != 'logout') {
+			$this->include_script('login_control.js');
 		}
 
-		if ($this->rcmail->task == 'logout') {
-			$this->add_hook('logout_after', array($this, 'logout_after'));
-		}
-
-		if (!preg_match('/^(login|logout)$/i', $this->rcmail->task)) {
-			$this->include_script('login_control.min.js');
-		}
+		// add hooks
+		$this->add_hook('ready', array($this, 'page_ready'));
+		$this->add_hook('authenticate', array($this, 'user_login'));
+		$this->add_hook('session_destroy', array($this, 'user_logout'));
 	}
 
-	function refresh($args)
+	public function page_ready($args)
 	{
-		$username = $this->rcmail->user->get_username();
-
-		if (!empty($username) && !$this->check($username)) {
-			$this->rcmail->session->write('access_restricted', '1');
-			$this->rcmail->write_log('userlogins', sprintf("Login Control: access denied for %s from %s.", $username, rcube_utils::remote_addr()));
-			$this->rcmail->output->command('plugin.access_restricted');
-		}
-	}
-
-	function authenticate($args)
-	{
-		if (!$this->check($args['user'])) {
-			$this->rcmail->write_log('userlogins', sprintf("Login Control: access denied for %s from %s.", $args['user'], rcube_utils::remote_addr()));
-			$args['abort'] = true;
-			$args['error'] = $this->gettext('access_restricted');
+		if (!$this->check($this->username)) {
+			$this->rc->session->write('login_control.access_restricted', '1');
+			$this->rc->write_log('userlogins', sprintf("Login Control: access denied for %s from %s.", $this->username, $this->ipaddr));
+			if ($this->rc->output->ajax_call) {
+				$this->rc->output->command('plugin.access_restricted');
+			} else {
+				header('Location: '.$this->rc->url(array('task' => 'logout'), false, false, true));
+			}
 		}
 
 		return $args;
 	}
 
-	function logout_after($args)
+	public function user_login($args)
 	{
-		if ($this->rcmail->session->read('access_restricted') == '1') {
-			$this->rcmail->session->destroy('access_restricted');
-			if (!$this->check($args['user'])) {
-				$this->rcmail->output->show_message($this->gettext('access_restricted'), 'warning');
-			}
+		if (!$this->check($args['user'])) {
+			$this->rc->write_log('userlogins', sprintf("Login Control: access denied for %s from %s.", $args['user'], $this->ipaddr));
+			$args['abort'] = true;
+			$args['error'] = $this->gettext(array('name' => 'access_restricted', 'vars' => array('ipaddr' => $this->ipaddr)));
 		}
+
+		return $args;
 	}
 
+	public function user_logout($args)
+	{
+		if ($this->rc->session->read('login_control.access_restricted') == '1') {
+			$this->rc->session->destroy('login_control.access_restricted');
+			if (!$this->check($this->username)) {
+				$this->rc->output->show_message($this->gettext(array('name' => 'access_restricted', 'vars' => array('ipaddr' => $this->ipaddr))), 'warning', null, true, 600);
+			}
+		}
+
+		return $args;
+	}
+
+	/**
+	 * Check if given username in white/blacklist
+	 * @param string $username Username to check
+	 * @return boolean For non-blocked users return True, otherwise False
+	 */
 	private function check($username)
 	{
 		if (empty($username) || !is_string($username)) {
 			return true;
 		}
 
-		if (isset($this->list[$username]) && !empty($this->list[$username])) {
+		if (isset($this->list['*']) && !empty($this->list['*']) || isset($this->list[$username]) && !empty($this->list[$username])) {
 			$found = false;
-			$user_ip = rcube_utils::remote_addr();
-			$user_list =& $this->list[$username];
 
+			// get global list
+			$user_list = (isset($this->list['*']) ? $this->list['*'] : array());
+
+			// check format of list
+			if (!is_string($user_list) && !is_array($user_list)) {
+				rcmail::raise_error(array(
+					'code' => 600, 'type' => 'php',
+					'line' => __LINE__, 'file' => __FILE__,
+					'message' => 'Login Control plugin: Invalid format of list of IP addresses for all users, must be string or array.'), true, false);
+				$user_list = array();
+			}
+
+			// check and append a list for user specified
+			if (isset($this->list[$username])) {
+				// check format of list
+				if (!is_string($this->list[$username]) && !is_array($this->list[$username])) {
+					rcmail::raise_error(array(
+						'code' => 600, 'type' => 'php',
+						'line' => __LINE__, 'file' => __FILE__,
+						'message' => 'Login Control plugin: Invalid format of list of IP addresses for '.$username.', must be string or array.'), true, false);
+					$this->list[$username] = array();
+				}
+
+				// append a list
+				$user_list = array_merge((is_string($user_list) ? array($user_list) : $user_list), (is_string($this->list[$username]) ? array($this->list[$username]) : $this->list[$username]));
+			}
+
+			// for string format
 			if (is_string($user_list)) {
-				if (preg_match('/'.IPADDR_REGEXP.'/', $user_list) && $this->ip_in_range($user_ip, $user_list)) {
+				if (preg_match('/'.IPADDR_REGEXP.'/', $user_list) && $this->ip_in_range($this->ipaddr, $user_list)) {
 					$found = true;
 				}
 			}
+
+			// for array format
 			elseif (is_array($user_list)) {
 				for ($i=0,$a=count($user_list); $i<$a; $i++) {
-					if (preg_match('/'.IPADDR_REGEXP.'/', $user_list[$i]) && $this->ip_in_range($user_ip, $user_list[$i])) {
+					if (!is_string($user_list[$i])) {
+						rcmail::raise_error(array(
+							'code' => 600, 'type' => 'php',
+							'line' => __LINE__, 'file' => __FILE__,
+							'message' => 'Login Control plugin: Invalid format of list of IP addresses, must be string.'), true, false);
+						break;
+					}
+					if (preg_match('/'.IPADDR_REGEXP.'/', $user_list[$i]) && $this->ip_in_range($this->ipaddr, $user_list[$i])) {
 						$found = true;
 						break;
 					}
 				}
 			}
 
-			if ($this->mode == 'whitelist') {
-				return $found;
-			}
-			elseif ($this->mode == 'blacklist') {
-				return !$found;
-			}
+			return ($this->mode == 'blacklist' ? !$found : $found);
 		}
 
 		return true;

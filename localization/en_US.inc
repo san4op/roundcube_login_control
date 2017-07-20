@@ -1,6 +1,6 @@
 <?php
 
-$labels = array();
-$labels['access_restricted'] = 'Access from this IP address for this user denied!';
+$messages = array();
+$messages['access_restricted'] = 'Access from your IP-address $ipaddr is denied!';
 
 ?>

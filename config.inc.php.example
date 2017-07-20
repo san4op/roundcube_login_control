@@ -5,6 +5,10 @@
 
 $config['login_control_mode'] = 'whitelist';
 $config['login_control_list'] = array(
+	'*' => array(
+		'10.11.12.0/26',
+		'172.16.33.0/16',
+	),
 	'user1@domain.com' => array(
 		'192.0.2.74',
 		'192.0.2.212',
@@ -15,6 +19,9 @@ $config['login_control_list'] = array(
 		'198.51.100.1',
 		'198.51.100.12/30',
 	),
+	'user3@domain.com' => '192.168.0.0/24',
+	'user4@domain.com' => '192.168.0.0/24',
+	'user5@domain.com' => '192.168.0.0/24',
 );
 
 ?>
