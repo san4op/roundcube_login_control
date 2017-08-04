@@ -52,8 +52,10 @@ class login_control extends rcube_plugin
 	public function page_ready($args)
 	{
 		if (!$this->check($this->username)) {
-			$this->rc->session->write('login_control.access_restricted', '1');
 			$this->rc->write_log('userlogins', sprintf("Login Control: access denied for %s from %s.", $this->username, $this->ipaddr));
+
+			$_SESSION['login_control.access_restricted'] = '1';
+
 			if ($this->rc->output->ajax_call) {
 				$this->rc->output->command('plugin.access_restricted');
 			} else {
@@ -68,6 +70,7 @@ class login_control extends rcube_plugin
 	{
 		if (!$this->check($args['user'])) {
 			$this->rc->write_log('userlogins', sprintf("Login Control: access denied for %s from %s.", $args['user'], $this->ipaddr));
+
 			$args['abort'] = true;
 			$args['error'] = $this->gettext(array('name' => 'access_restricted', 'vars' => array('ipaddr' => $this->ipaddr)));
 		}
@@ -77,8 +80,9 @@ class login_control extends rcube_plugin
 
 	public function user_logout($args)
 	{
-		if ($this->rc->session->read('login_control.access_restricted') == '1') {
-			$this->rc->session->destroy('login_control.access_restricted');
+		if ($_SESSION['login_control.access_restricted'] == '1') {
+			unset($_SESSION['login_control.access_restricted']);
+
 			if (!$this->check($this->username)) {
 				$this->rc->output->show_message($this->gettext(array('name' => 'access_restricted', 'vars' => array('ipaddr' => $this->ipaddr))), 'warning', null, true, 600);
 			}
